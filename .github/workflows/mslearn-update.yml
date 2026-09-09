@@ -23,7 +23,7 @@ jobs:
       - name: Run Auto-Updater Script
         env:
           MS_LEARN_SHARE_ID: ${{ secrets.MS_LEARN_SHARE_ID }}
-        run: python update_mslearn.py
+        run: python Update_MsLearn.py
 
       - name: Commit and Push Changes
         run: |
