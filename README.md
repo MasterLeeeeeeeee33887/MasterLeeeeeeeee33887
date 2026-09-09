@@ -27,22 +27,9 @@ I am actively building my skills and collecting achievements on **Microsoft Lear
 
 ### 🏆 Featured Badges & Certifications
 
-| Achievement / Module | Category / Topic | Status |
 <!-- START_SECTION:mslearn -->
+<!-- END_SECTION:mslearn -->
 
-
-
-
-
-
+| Achievement / Module | Category / Topic | Status |
 | :--- | :--- | :---: |
 | 🏅 **[Write your first C# code]** | .NET | ✅ Completed |
-| 🏅 **[Store and retrieve data using literal and variable values in C#]** | .NET | ✅ Completed |
-| ⏳ **[Describe cloud computing]** | Administrator, Developer, DevOps Engineer, Solution Architect, Azure | ✅ Completed  |
-| :--- | :--- | :---: |
-| :--- | :--- | :---: |
-| :--- | :--- | :---: |
-| :--- | :--- | :---: |
-| :--- | :--- | :---: |
-
-<!-- END_SECTION:mslearn -->
