@@ -1,98 +1,114 @@
 import os
 import re
-import json
 import requests
 
-USERNAME = os.environ.get("MS_LEARN_SHARE_ID", "OverseerLord-8836").strip()
-PROFILE_URL = f"https://learn.microsoft.com/en-us/users/{USERNAME}/"
+SHARE_ID = os.environ.get("MS_LEARN_SHARE_ID", "").strip()
+USERNAME = "OverseerLord-8836"
+TRANSCRIPT_API = f"https://learn.microsoft.com/api/profiles/transcript/share/{SHARE_ID}?locale=en-us"
 
-def fetch_profile_stats():
+def fetch_transcript_data():
+    if not SHARE_ID or len(SHARE_ID) < 6:
+        print("Valid MS_LEARN_SHARE_ID transcript token not provided.")
+        return None
+
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        "Accept": "application/json"
     }
 
     try:
-        res = requests.get(PROFILE_URL, headers=headers, timeout=15)
-        print(f"HTTP Status: {res.status_code}")
-        html = res.text
+        res = requests.get(TRANSCRIPT_API, headers=headers, timeout=15)
+        if res.status_code == 200:
+            return res.json()
+        print(f"Transcript API returned status {res.status_code}")
     except requests.RequestException as e:
-        print(f"Network error: {e}")
-        return None
+        print(f"Transcript request failed: {e}")
+    return None
 
-    stats = {}
+def build_detailed_markdown(data):
+    lines = []
 
-    # Extract all numbers preceding Badges / Trophies / XP
-    badges = re.findall(r'([\d,]+)\s*(?:</span>)?\s*<[^>]*>\s*Badges', html, re.IGNORECASE)
-    trophies = re.findall(r'([\d,]+)\s*(?:</span>)?\s*<[^>]*>\s*Trophies', html, re.IGNORECASE)
-    xp = re.search(r'([\d,]+)\s*/\s*[\d,]+\s*XP', html, re.IGNORECASE)
-    level = re.search(r'LEVEL\s*(\d+)', html, re.IGNORECASE)
+    # 1. Headline Statistics
+    badges_count = data.get("badgesCount", 359)
+    trophies_count = data.get("trophiesCount", 81)
+    reputation = data.get("reputationPoints", 468550)
 
-    if badges:
-        stats["badges"] = badges[0].replace(",", "")
-    if trophies:
-        stats["trophies"] = trophies[0].replace(",", "")
-    if xp:
-        stats["points"] = xp.group(1)
-    if level:
-        stats["level"] = level.group(1)
+    lines.append("### 📊 Microsoft Learn Summary")
+    lines.append(f"- 🏆 **Trophies:** {trophies_count}")
+    lines.append(f"- 🏅 **Badges & Modules Completed:** {badges_count}")
+    lines.append(f"- ⚡ **Total XP / Points:** {reputation:,} XP")
+    lines.append("")
 
-    # Secondary check via data attributes
-    if "badges" not in stats:
-        b_attr = re.search(r'data-bi-name="badges"[^>]*>.*?([\d,]+)', html, re.DOTALL)
-        if b_attr:
-            stats["badges"] = b_attr.group(1).replace(",", "")
+    # 2. Certifications & Applied Skills
+    certs = data.get("certifications", [])
+    if certs:
+        lines.append("### 📜 Certifications & Applied Skills")
+        for c in certs:
+            title = c.get("title") or c.get("name", "Certification")
+            date = c.get("issuedDate", "").split("T")[0]
+            url = c.get("url") or c.get("certificationUrl")
+            item = f"- **[{title}]({url})**" if url else f"- **{title}**"
+            if date:
+                item += f" `(Issued: {date})`"
+            lines.append(item)
+        lines.append("")
 
-    if "trophies" not in stats:
-        t_attr = re.search(r'data-bi-name="trophies"[^>]*>.*?([\d,]+)', html, re.DOTALL)
-        if t_attr:
-            stats["trophies"] = t_attr.group(1).replace(",", "")
+    # 3. Learning Paths Completed
+    paths = data.get("learningPaths", [])
+    if paths:
+        lines.append("### 🚀 Completed Learning Paths")
+        lines.append("| Learning Path | Modules | Completed Date |")
+        lines.append("| :--- | :---: | :---: |")
+        for p in paths[:8]:
+            title = p.get("title", "Learning Path")
+            url = p.get("url")
+            date = p.get("completedOn", "").split("T")[0]
+            count = p.get("modulesCount", "-")
+            link = f"[{title}]({url})" if url else title
+            lines.append(f"| {link} | {count} | {date} |")
+        lines.append("")
 
-    print("Parsed stats:", stats)
-    return stats
+    # 4. Recent Completed Modules & Badges (Detailed Table)
+    modules = data.get("modules", [])
+    if modules:
+        lines.append("### 🏅 Recently Completed Modules & Badges")
+        lines.append("| Badge | Module Name | Completed On |")
+        lines.append("| :---: | :--- | :---: |")
+        for m in modules[:12]:
+            title = m.get("title", "Module")
+            url = m.get("url")
+            date = m.get("completedOn", "").split("T")[0]
+            icon = m.get("iconUrl")
 
-def build_markdown(stats):
-    badges = stats.get("badges", "359")
-    trophies = stats.get("trophies", "81")
-    points = stats.get("points", "468,550")
-    level = stats.get("level", "13")
+            badge_img = f'<img src="{icon}" width="36" />' if icon else "🏅"
+            name = f"[{title}]({url})" if url else title
+            lines.append(f"| {badge_img} | {name} | {date} |")
+        
+        if len(modules) > 12:
+            lines.append(f"\n*...and {len(modules) - 12} more modules verified on transcript.*")
+        lines.append("")
 
-    return (
-        "### 📊 Microsoft Learn Stats\n"
-        f"- 🏆 **Trophies:** {trophies}\n"
-        f"- 🏅 **Badges:** {badges}\n"
-        f"- 🎖️ **Level:** Level {level}\n"
-        f"- ⚡ **XP Points:** {points} XP\n\n"
-        "*(Updated automatically via GitHub Actions)*"
-    )
+    lines.append("*(Updated automatically via GitHub Actions)*")
+    return "\n".join(lines)
 
 def update_readme(content):
     readme_path = "README.md"
-    if not os.path.exists(readme_path):
-        print("README.md not found.")
-        return
-
     with open(readme_path, "r", encoding="utf-8") as f:
         readme = f.read()
 
     pattern = r"<!-- START_SECTION:mslearn -->.*?<!-- END_SECTION:mslearn -->"
     replacement = f"<!-- START_SECTION:mslearn -->\n{content}\n<!-- END_SECTION:mslearn -->"
 
-    if not re.search(pattern, readme, re.DOTALL):
-        print("Marker tags not found in README.md.")
-        return
-
-    new_readme = re.sub(pattern, replacement, readme, flags=re.DOTALL)
-    if new_readme == readme:
-        print("Content identical; no text change needed.")
-        return
-
-    with open(readme_path, "w", encoding="utf-8") as f:
-        f.write(new_readme)
-    print("README.md updated successfully.")
+    if re.search(pattern, readme, re.DOTALL):
+        updated = re.sub(pattern, replacement, readme, flags=re.DOTALL)
+        with open(readme_path, "w", encoding="utf-8") as f:
+            f.write(updated)
+        print("README updated successfully.")
 
 if __name__ == "__main__":
-    stats = fetch_profile_stats()
-    md = build_markdown(stats if stats else {})
-    update_readme(md)
+    data = fetch_transcript_data()
+    if data:
+        md = build_detailed_markdown(data)
+        update_readme(md)
+    else:
+        print("Could not fetch transcript details. Check MS_LEARN_SHARE_ID.")
