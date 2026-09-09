@@ -20,17 +20,21 @@ Here are some ideas to get you started:
 
 ## 📚 Microsoft Learn Profile & Achievements
 
-<!-- START_SECTION:mslearn -->
-<!-- Your automated stats will appear here -->
-<!-- END_SECTION:mslearn -->
-
 [![Microsoft Learn Profile](https://img.shields.io/badge/Microsoft%20Learn-OverseerLord--8836-0078D4?style=for-the-badge&logo=microsoft&logoColor=white)](https://learn.microsoft.com/en-us/users/OverseerLord-8836)
 
 I am actively building my skills and collecting achievements on **Microsoft Learn**. Click the badge above to view my official profile and complete learning history!
 
+
 ### 🏆 Featured Badges & Certifications
 
 | Achievement / Module | Category / Topic | Status |
+<!-- START_SECTION:mslearn -->
+
+
+
+
+
+
 | :--- | :--- | :---: |
 | 🏅 **[Write your first C# code]** | .NET | ✅ Completed |
 | 🏅 **[Store and retrieve data using literal and variable values in C#]** | .NET | ✅ Completed |
@@ -40,3 +44,5 @@ I am actively building my skills and collecting achievements on **Microsoft Lear
 | :--- | :--- | :---: |
 | :--- | :--- | :---: |
 | :--- | :--- | :---: |
+
+<!-- END_SECTION:mslearn -->
