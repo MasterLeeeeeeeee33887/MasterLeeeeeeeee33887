@@ -90,13 +90,15 @@ def update_readme(markdown_content):
         with open(readme_path, "r", encoding="utf-8") as f:
             readme = f.read()
 
-        pattern = r"(?<=<!-- START_SECTION:mslearn -->\n).*?(?=\n<!-- END_SECTION:mslearn -->)"
+        # Flexible pattern matching any whitespace/newlines between tags
+        pattern = r"(<!-- START_SECTION:mslearn -->)(.*?)(<!-- END_SECTION:mslearn -->)"
         
         if not re.search(pattern, readme, flags=re.DOTALL):
             print("Warning: Anchor tags <!-- START_SECTION:mslearn --> not found in README.md.")
             return
 
-        updated = re.sub(pattern, markdown_content, readme, flags=re.DOTALL)
+        replacement = f"\\1\n\n{markdown_content}\n\n\\3"
+        updated = re.sub(pattern, replacement, readme, flags=re.DOTALL)
 
         with open(readme_path, "w", encoding="utf-8") as f:
             f.write(updated)
