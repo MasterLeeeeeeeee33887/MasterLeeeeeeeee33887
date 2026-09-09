@@ -15,7 +15,14 @@ Here are some ideas to get you started:
 - ⚡ Fun fact: ...
 -->
 
+
+
+
 ## 📚 Microsoft Learn Profile & Achievements
+
+<!-- START_SECTION:mslearn -->
+<!-- Your automated stats will appear here -->
+<!-- END_SECTION:mslearn -->
 
 [![Microsoft Learn Profile](https://img.shields.io/badge/Microsoft%20Learn-OverseerLord--8836-0078D4?style=for-the-badge&logo=microsoft&logoColor=white)](https://learn.microsoft.com/en-us/users/OverseerLord-8836)
 
