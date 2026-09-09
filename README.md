@@ -15,15 +15,11 @@ Here are some ideas to get you started:
 - ⚡ Fun fact: ...
 -->
 
-
-
-
 ## 📚 Microsoft Learn Profile & Achievements
 
 [![Microsoft Learn Profile](https://img.shields.io/badge/Microsoft%20Learn-OverseerLord--8836-0078D4?style=for-the-badge&logo=microsoft&logoColor=white)](https://learn.microsoft.com/en-us/users/OverseerLord-8836)
 
 I am actively building my skills and collecting achievements on **Microsoft Learn**. Click the badge above to view my official profile and complete learning history!
-
 
 ### 🏆 Featured Badges & Certifications
 
@@ -32,4 +28,4 @@ I am actively building my skills and collecting achievements on **Microsoft Lear
 
 | Achievement / Module | Category / Topic | Status |
 | :--- | :--- | :---: |
-| 🏅 **[Write your first C# code]** | .NET | ✅ Completed |
+| 🏅 **Write your first C# code** | .NET | ✅ Completed |
