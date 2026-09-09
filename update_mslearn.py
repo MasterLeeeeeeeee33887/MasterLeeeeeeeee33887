@@ -3,46 +3,71 @@ import re
 import sys
 import requests
 
-SHARE_ID = os.environ.get("MS_LEARN_SHARE_ID")
+USER_OR_SHARE_ID = os.environ.get("MS_LEARN_SHARE_ID", "OverseerLord-8836").strip()
 
-if not SHARE_ID:
-    print("Error: MS_LEARN_SHARE_ID environment variable is missing.")
-    sys.exit(1)
+def fetch_data():
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept": "application/json"
+    }
 
-API_URL = f"https://learn.microsoft.com/api/profiles/transcript/share/{SHARE_ID}?locale=en-us"
-
-def fetch_transcript_data():
-    headers = {"User-Agent": "Mozilla/5.0"}
+    # Attempt 1: Fetch via Public Profile / Achievement API
+    user_url = f"https://learn.microsoft.com/api/profiles/{USER_OR_SHARE_ID}"
     try:
-        response = requests.get(API_URL, headers=headers, timeout=15)
-        response.raise_for_status()
-        return response.json()
-    except requests.RequestException as e:
-        print(f"Failed to fetch transcript: {e}")
-        return None
+        res = requests.get(user_url, headers=headers, timeout=15)
+        if res.status_code == 200:
+            return res.json()
+    except requests.RequestException:
+        pass
+
+    # Attempt 2: Fetch via Shared Transcript API
+    transcript_url = f"https://learn.microsoft.com/api/profiles/transcript/share/{USER_OR_SHARE_ID}?locale=en-us"
+    try:
+        res = requests.get(transcript_url, headers=headers, timeout=15)
+        if res.status_code == 200:
+            return res.json()
+    except requests.RequestException:
+        pass
+
+    print(f"Error: Could not retrieve data for identifier '{USER_OR_SHARE_ID}'.")
+    return None
 
 def build_resume_markdown(data):
-    # Overall summary metrics
-    badges_count = data.get("badgesCount", 0)
-    trophies_count = data.get("trophiesCount", 0)
-    reputation_points = data.get("reputationPoints", 0)
+    # Extract metrics across varying Microsoft Learn API response structures
+    badges_count = (
+        data.get("badgesCount")
+        or data.get("badgesAchievedCount")
+        or data.get("badgeCount")
+        or 0
+    )
+    trophies_count = (
+        data.get("trophiesCount")
+        or data.get("trophiesAchievedCount")
+        or data.get("trophyCount")
+        or 0
+    )
+    points = (
+        data.get("points")
+        or data.get("reputationPoints")
+        or data.get("totalPoints")
+        or 0
+    )
+    level = data.get("level", {}).get("levelNumber") if isinstance(data.get("level"), dict) else data.get("level")
 
-    # Collections
     certifications = data.get("certifications", [])
     learning_paths = data.get("learningPaths", [])
     modules = data.get("modules", [])
 
     lines = []
-    
-    # 1. Summary Cards
     lines.append("### 📊 Microsoft Learn Stats")
     lines.append(f"- 🏆 **Trophies:** {trophies_count}")
-    lines.append(f"- 🏅 **Badges & Modules:** {badges_count}")
-    if reputation_points:
-        lines.append(f"- ⚡ **Reputation / XP:** {reputation_points:,}")
+    lines.append(f"- 🏅 **Badges:** {badges_count}")
+    if level:
+        lines.append(f"- 🎖️ **Level:** Level {level}")
+    if points:
+        lines.append(f"- ⚡ **XP Points:** {points:,}")
     lines.append("")
 
-    # 2. Certifications & Applied Skills
     if certifications:
         lines.append("### 📜 Certifications & Applied Skills")
         for cert in certifications:
@@ -55,20 +80,16 @@ def build_resume_markdown(data):
             lines.append(item)
         lines.append("")
 
-    # 3. Learning Paths Finished
     if learning_paths:
         lines.append("### 🚀 Completed Learning Paths")
-        for path in learning_paths:
+        for path in learning_paths[:10]:
             title = path.get("title", "Learning Path")
             url = path.get("url")
-            item = f"- [{title}]({url})" if url else f"- {title}"
-            lines.append(item)
+            lines.append(f"- [{title}]({url})" if url else f"- {title}")
         lines.append("")
 
-    # 4. Recent Courses & Modules
     if modules:
         lines.append("### 📚 Recent Completed Modules & Courses")
-        # Display the 10 most recent modules
         for mod in modules[:10]:
             title = mod.get("title", "Module")
             url = mod.get("url")
@@ -90,11 +111,9 @@ def update_readme(markdown_content):
         with open(readme_path, "r", encoding="utf-8") as f:
             readme = f.read()
 
-        # Flexible pattern matching any whitespace/newlines between tags
         pattern = r"(<!-- START_SECTION:mslearn -->)(.*?)(<!-- END_SECTION:mslearn -->)"
-        
         if not re.search(pattern, readme, flags=re.DOTALL):
-            print("Warning: Anchor tags <!-- START_SECTION:mslearn --> not found in README.md.")
+            print("Warning: Anchor tags not found.")
             return
 
         replacement = f"\\1\n\n{markdown_content}\n\n\\3"
@@ -105,10 +124,12 @@ def update_readme(markdown_content):
             
         print("README.md successfully updated.")
     except FileNotFoundError:
-        print("README.md not found in the root directory.")
+        print("README.md not found.")
 
 if __name__ == "__main__":
-    transcript = fetch_transcript_data()
-    if transcript:
-        content = build_resume_markdown(transcript)
-        update_readme(content)
+    profile_data = fetch_data()
+    if profile_data:
+        markdown = build_resume_markdown(profile_data)
+        update_readme(markdown)
+    else:
+        print("No data could be formatted.")
