@@ -4,7 +4,7 @@ import requests
 
  
 SHARE_ID = os.environ.get("MS_LEARN_SHARE_ID")
-API_URL = f"https://learn.microsoft.com/en-us/users/***REMOVED***/transcript/***REMOVED***"
+API_URL = f"https://learn.microsoft.com/api/profiles/transcript/share/{SHARE_ID}?locale=en-us"
 
 def fetch_achievements():
     response = requests.get(API_URL)
