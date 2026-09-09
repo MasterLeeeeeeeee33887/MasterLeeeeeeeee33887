@@ -1,111 +1,90 @@
 import os
 import re
-import sys
+import json
 import requests
 
-USER_OR_SHARE_ID = os.environ.get("MS_LEARN_SHARE_ID", "OverseerLord-8836").strip()
+USERNAME = os.environ.get("MS_LEARN_SHARE_ID", "OverseerLord-8836").strip()
+PROFILE_URL = f"https://learn.microsoft.com/en-us/users/{USERNAME}/"
 
-def fetch_data():
+def fetch_profile_stats():
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Accept": "application/json"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9"
     }
 
-    # Attempt 1: Fetch via Public Profile / Achievement API
-    user_url = f"https://learn.microsoft.com/api/profiles/{USER_OR_SHARE_ID}"
     try:
-        res = requests.get(user_url, headers=headers, timeout=15)
-        if res.status_code == 200:
-            return res.json()
-    except requests.RequestException:
-        pass
+        res = requests.get(PROFILE_URL, headers=headers, timeout=15)
+        res.raise_for_status()
+        html = res.text
+    except requests.RequestException as e:
+        print(f"Error loading profile page: {e}")
+        return None
 
-    # Attempt 2: Fetch via Shared Transcript API
-    transcript_url = f"https://learn.microsoft.com/api/profiles/transcript/share/{USER_OR_SHARE_ID}?locale=en-us"
-    try:
-        res = requests.get(transcript_url, headers=headers, timeout=15)
-        if res.status_code == 200:
-            return res.json()
-    except requests.RequestException:
-        pass
+    stats = {}
 
-    print(f"Error: Could not retrieve data for identifier '{USER_OR_SHARE_ID}'.")
-    return None
+    # 1. Try to find the embedded initial hydration JSON state
+    json_match = re.search(r'<script[^>]*id="__NEXT_DATA__"[^>]*>(.*?)</script>', html, re.DOTALL)
+    if json_match:
+        try:
+            data = json.loads(json_match.group(1))
+            props = data.get("props", {}).get("pageProps", {})
+            profile_data = props.get("profile", {}) or props.get("user", {})
+            if profile_data:
+                stats["badges"] = profile_data.get("badgesCount") or profile_data.get("badgeCount")
+                stats["trophies"] = profile_data.get("trophiesCount") or profile_data.get("trophyCount")
+                stats["points"] = profile_data.get("points") or profile_data.get("reputationPoints")
+                stats["level"] = profile_data.get("level", {}).get("levelNumber") if isinstance(profile_data.get("level"), dict) else profile_data.get("level")
+        except Exception:
+            pass
 
-def build_resume_markdown(data):
-    # Extract metrics across varying Microsoft Learn API response structures
-    badges_count = (
-        data.get("badgesCount")
-        or data.get("badgesAchievedCount")
-        or data.get("badgeCount")
-        or 0
-    )
-    trophies_count = (
-        data.get("trophiesCount")
-        or data.get("trophiesAchievedCount")
-        or data.get("trophyCount")
-        or 0
-    )
-    points = (
-        data.get("points")
-        or data.get("reputationPoints")
-        or data.get("totalPoints")
-        or 0
-    )
-    level = data.get("level", {}).get("levelNumber") if isinstance(data.get("level"), dict) else data.get("level")
+    # 2. Fallback: Direct regex extraction from server-rendered HTML elements
+    if not stats.get("badges"):
+        b_match = re.search(r'([\d,]+)\s*(?:</span>)?\s*<[^>]+>\s*Badges', html, re.IGNORECASE) or \
+                  re.search(r'data-bi-name="badges"[^>]*>.*?([\d,]+)', html, re.DOTALL)
+        if b_match:
+            stats["badges"] = b_match.group(1).replace(",", "")
 
-    certifications = data.get("certifications", [])
-    learning_paths = data.get("learningPaths", [])
-    modules = data.get("modules", [])
+    if not stats.get("trophies"):
+        t_match = re.search(r'([\d,]+)\s*(?:</span>)?\s*<[^>]+>\s*Trophies', html, re.IGNORECASE) or \
+                  re.search(r'data-bi-name="trophies"[^>]*>.*?([\d,]+)', html, re.DOTALL)
+        if t_match:
+            stats["trophies"] = t_match.group(1).replace(",", "")
 
-    lines = []
-    lines.append("### 📊 Microsoft Learn Stats")
-    lines.append(f"- 🏆 **Trophies:** {trophies_count}")
-    lines.append(f"- 🏅 **Badges:** {badges_count}")
+    if not stats.get("points"):
+        xp_match = re.search(r'([\d,]+)\s*/\s*[\d,]+\s*XP', html, re.IGNORECASE)
+        if xp_match:
+            stats["points"] = xp_match.group(1)
+
+    if not stats.get("level"):
+        lvl_match = re.search(r'LEVEL\s*(\d+)', html, re.IGNORECASE)
+        if lvl_match:
+            stats["level"] = lvl_match.group(1)
+
+    return stats
+
+def build_markdown(stats):
+    badges = stats.get("badges", 0)
+    trophies = stats.get("trophies", 0)
+    points = stats.get("points")
+    level = stats.get("level")
+
+    lines = [
+        "### 📊 Microsoft Learn Stats",
+        f"- 🏆 **Trophies:** {trophies}",
+        f"- 🏅 **Badges:** {badges}"
+    ]
+
     if level:
         lines.append(f"- 🎖️ **Level:** Level {level}")
     if points:
-        lines.append(f"- ⚡ **XP Points:** {points:,}")
+        lines.append(f"- ⚡ **XP Points:** {points} XP" if "XP" not in str(points) else f"- ⚡ **XP Points:** {points}")
+
     lines.append("")
-
-    if certifications:
-        lines.append("### 📜 Certifications & Applied Skills")
-        for cert in certifications:
-            title = cert.get("title") or cert.get("name", "Certification")
-            issued = cert.get("issuedDate", "").split("T")[0]
-            url = cert.get("url") or cert.get("certificationUrl")
-            item = f"- **[{title}]({url})**" if url else f"- **{title}**"
-            if issued:
-                item += f" *(Issued: {issued})*"
-            lines.append(item)
-        lines.append("")
-
-    if learning_paths:
-        lines.append("### 🚀 Completed Learning Paths")
-        for path in learning_paths[:10]:
-            title = path.get("title", "Learning Path")
-            url = path.get("url")
-            lines.append(f"- [{title}]({url})" if url else f"- {title}")
-        lines.append("")
-
-    if modules:
-        lines.append("### 📚 Recent Completed Modules & Courses")
-        for mod in modules[:10]:
-            title = mod.get("title", "Module")
-            url = mod.get("url")
-            date = mod.get("completedOn", "").split("T")[0]
-            item = f"- [{title}]({url})" if url else f"- {title}"
-            if date:
-                item += f" `({date})`"
-            lines.append(item)
-        if len(modules) > 10:
-            lines.append(f"\n*...and {len(modules) - 10} more completed modules.*")
-        lines.append("")
-
     lines.append("*(Updated automatically via GitHub Actions)*")
     return "\n".join(lines)
 
-def update_readme(markdown_content):
+def update_readme(content):
     readme_path = "README.md"
     try:
         with open(readme_path, "r", encoding="utf-8") as f:
@@ -116,20 +95,20 @@ def update_readme(markdown_content):
             print("Warning: Anchor tags not found.")
             return
 
-        replacement = f"\\1\n\n{markdown_content}\n\n\\3"
+        replacement = f"\\1\n\n{content}\n\n\\3"
         updated = re.sub(pattern, replacement, readme, flags=re.DOTALL)
 
         with open(readme_path, "w", encoding="utf-8") as f:
             f.write(updated)
-            
+
         print("README.md successfully updated.")
     except FileNotFoundError:
         print("README.md not found.")
 
 if __name__ == "__main__":
-    profile_data = fetch_data()
-    if profile_data:
-        markdown = build_resume_markdown(profile_data)
-        update_readme(markdown)
+    stats = fetch_profile_stats()
+    if stats and (stats.get("badges") or stats.get("trophies")):
+        md = build_markdown(stats)
+        update_readme(md)
     else:
-        print("No data could be formatted.")
+        print(f"Stats fetched: {stats}. Could not extract non-zero stats from public page.")
