@@ -27,7 +27,7 @@ I am actively building my skills and collecting achievements on **Microsoft Lear
 
 ### 📊 Microsoft Learn Stats
 - 🏆 **Trophies:** 0
-- 🏅 **Badges & Modules:** 0
+- 🏅 **Badges:** 0
 
 *(Updated automatically via GitHub Actions)*
 
