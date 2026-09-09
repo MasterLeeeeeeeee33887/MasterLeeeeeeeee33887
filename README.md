@@ -24,6 +24,13 @@ I am actively building my skills and collecting achievements on **Microsoft Lear
 ### 🏆 Featured Badges & Certifications
 
 <!-- START_SECTION:mslearn -->
+
+### 📊 Microsoft Learn Stats
+- 🏆 **Trophies:** 0
+- 🏅 **Badges & Modules:** 0
+
+*(Updated automatically via GitHub Actions)*
+
 <!-- END_SECTION:mslearn -->
 
 | Achievement / Module | Category / Topic | Status |
