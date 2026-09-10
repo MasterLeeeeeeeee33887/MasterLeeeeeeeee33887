@@ -24,11 +24,10 @@ I am actively building my skills and collecting achievements on **Microsoft Lear
 ### 🏆 Featured Badges & Certifications
 
 <!-- START_SECTION:mslearn -->
-### 📊 Microsoft Learn Stats
+### 📊 Microsoft Learn Summary
 - 🏆 **Trophies:** 81
-- 🏅 **Badges:** 359
-- 🎖️ **Level:** Level 13
-- ⚡ **XP Points:** 468,550 XP
+- 🏅 **Badges & Modules Completed:** 359
+- ⚡ **Total XP / Points:** 468,550 XP
 
 *(Updated automatically via GitHub Actions)*
 <!-- END_SECTION:mslearn -->
